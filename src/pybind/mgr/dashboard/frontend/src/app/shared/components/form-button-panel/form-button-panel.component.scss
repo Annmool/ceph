@@ -1,3 +1,7 @@
 cd-form-button-panel {
   width: 100%;
 }
+
+:host > div {
+  text-align: end;
+}
