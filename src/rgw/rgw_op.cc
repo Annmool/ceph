@@ -2943,7 +2943,8 @@ void RGWListBuckets::execute(optional_yield y)
     }
 
     op_ret = driver->list_buckets(this, s->owner.id, s->auth.identity->get_tenant(),
-                                  marker, end_marker, read_count, should_get_stats(), listing, y);
+                                  marker, end_marker, prefix, read_count,
+                                  should_get_stats(), listing, y);
 
     if (op_ret < 0) {
       /* hmm.. something wrong here.. the user was authenticated, so it
@@ -2953,9 +2954,21 @@ void RGWListBuckets::execute(optional_yield y)
       break;
     }
 
+    std::vector<RGWBucketEnt> filtered_buckets;
+    std::span<RGWBucketEnt> visible_buckets = listing.buckets;
+    if (!prefix.empty()) {
+      filtered_buckets.reserve(listing.buckets.size());
+      for (const auto& ent : listing.buckets) {
+        if (boost::algorithm::starts_with(ent.bucket.name, prefix)) {
+          filtered_buckets.push_back(ent);
+        }
+      }
+      visible_buckets = filtered_buckets;
+    }
+
     marker = listing.next_marker;
 
-    for (const auto& ent : listing.buckets) {
+    for (const auto& ent : visible_buckets) {
       global_stats.bytes_used += ent.size;
       global_stats.bytes_used_rounded += ent.size_rounded;
       global_stats.objects_count += ent.count;
@@ -2968,17 +2981,17 @@ void RGWListBuckets::execute(optional_yield y)
       policy_stats.buckets_count++;
       policy_stats.objects_count += ent.count;
     }
-    global_stats.buckets_count += listing.buckets.size();
-    total_count += listing.buckets.size();
+    global_stats.buckets_count += visible_buckets.size();
+    total_count += visible_buckets.size();
 
     done = (limit >= 0 && std::cmp_greater_equal(total_count, limit));
 
     if (!started) {
-      send_response_begin(!listing.buckets.empty());
+      send_response_begin(!visible_buckets.empty());
       started = true;
     }
 
-    handle_listing_chunk(listing.buckets);
+    handle_listing_chunk(visible_buckets);
   } while (!marker.empty() && !done);
   
   rgw::op_counters::tinc(counters, l_rgw_op_list_buckets_lat, s->time_elapsed());
