@@ -25,6 +25,7 @@
      *ngFor="let mdsCounter of objectValues(data.mdsCounters); trackBy: trackByFn">
   <div class="col-md-12">
     <cd-cephfs-chart [mdsCounter]="mdsCounter"></cd-cephfs-chart>
+    <cd-cephfs-chart [mdsCounter]="mdsCounter" [lhsCounter]="'mds_mem.rss'" [rhsCounter]="'mds_mem.heap'"></cd-cephfs-chart>
   </div>
 </div>
 

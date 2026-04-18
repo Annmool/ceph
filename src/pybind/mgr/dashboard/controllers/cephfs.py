@@ -217,7 +217,9 @@ class CephFS(RESTController):
                 "mds.inodes",
                 "mds.caps",
                 "mds.subtrees",
-                "mds_mem.ino"
+                "mds_mem.ino",
+                "mds_mem.rss",
+                "mds_mem.heap"
             ]
 
         result: dict = {}
